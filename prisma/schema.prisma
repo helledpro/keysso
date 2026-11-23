@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum AdSource {
+  YANDEX_SEARCH
+  YANDEX_PARTNER
+  MANUAL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      UserRole @default(EMPLOYEE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  adObservations AdObservation[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  clientName  String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  domains     Domain[]
+  regions     Region[]
+  keywords    Keyword[]
+}
+
+model Domain {
+  id        String   @id @default(cuid())
+  hostname  String
+  isPrimary Boolean  @default(false)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([projectId, hostname])
+}
+
+model Region {
+  id        String  @id @default(cuid())
+  name      String
+  yandexId  String?
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@unique([projectId, name])
+}
+
+model Keyword {
+  id        String   @id @default(cuid())
+  phrase    String
+  source    String   @default("MANUAL")
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([projectId, phrase])
+}
+
+model AdObservation {
+  id             String   @id @default(cuid())
+  source         AdSource @default(YANDEX_SEARCH)
+  title          String
+  text           String?
+  displayDomain  String?
+  targetUrl      String?
+  searchQuery    String?
+  region         String?
+  device          String?
+  sitelinks       Json?
+  observedAt      DateTime @default(now())
+  capturedById    String?
+  capturedBy      User?    @relation(fields: [capturedById], references: [id], onDelete: SetNull)
+  projectId       String?
+  competitorDomain String?
+  evidenceNote    String?
+  createdAt       DateTime @default(now())
+  @@index([displayDomain, observedAt])
+  @@index([projectId, observedAt])
+}
